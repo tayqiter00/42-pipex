@@ -43,19 +43,14 @@ static void set_normal_iostream(int fileio_fds[2], char *filein, char *fileout)
 {
     fileio_fds[0] = open(filein, O_RDONLY, 0400);
     if (fileio_fds[0] == -1)
-    {
-        perror("Filein cannot be opened!\n"); // not proper use of perror
-        exit(EXIT_FAILURE);
-    }
-    dup2(fileio_fds[0], STDIN_FILENO);
+        error_exit("open() failed on infile");
+    if (dup2(fileio_fds[0], STDIN_FILENO) == -1)
+        error_exit("stdin not changed to infile");
     close(fileio_fds[0]);
     fileio_fds[0] = -1; // set to -1 to indicate it's no longer used
     fileio_fds[1] = open(fileout, O_CREAT | O_WRONLY | O_TRUNC, 0755); // can probably be set later too
     if (fileio_fds[1] == -1)
-    {
-        // think have to check errno
-        exit(EXIT_FAILURE);
-    }
+        error_exit("open() failed on outfile");
 }
 
 int main(int ac, char **av, char **envp)

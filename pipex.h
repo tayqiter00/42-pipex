@@ -11,4 +11,6 @@
 # define R_END 0
 # define W_END 1
 
+void    error_exit(char *msg);
+
 #endif
