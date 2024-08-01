@@ -1,29 +1,5 @@
 #include "pipex.h"
 
-void    usage(void)
-{
-    dprintf(STDERR_FILENO, "Error: Improper arguments!\n");
-    printf("Example: ./pipex filein cmd1 cmd2 <...> fileout\n");
-    exit(EXIT_FAILURE);
-}
-
-void execute(char *cmd, char **envp)
-{
-    char    **cmd_no_opts;
-    char    *pathname;
-
-    cmd_no_opts = ft_split(cmd, ' ');
-    if (!cmd_no_opts)
-        error_exit("split");
-    pathname = find_pathname(cmd, envp, cmd_no_opts[0]);
-    if (pathname)
-    {
-        execve(pathname, cmd_no_opts, envp);
-    }
-    dprintf(STDERR_FILENO, "command not found\n");
-    // free_list();
-}
-
 void    pipe_n_exec(char *cmd, char **envp)
 {
     int pipefds[2];
@@ -50,6 +26,35 @@ void    pipe_n_exec(char *cmd, char **envp)
     }
 }
 
+int here_doc(char* delimiter)
+{
+    char    *buffer;
+    int     write_fd;
+    int     read_fd;
+
+    write_fd = open("here_doc", O_CREAT | O_WRONLY);
+    if (write_fd == -1)
+        error_exit("write-end here_doc open failed");
+    while (1)
+    {
+        printf("> ");
+        buffer = get_next_line(STDIN_FILENO);
+        if (!buffer || strcmp(delimiter, buffer) == 0)
+        {
+            free(buffer);
+            break ;
+        }
+        ft_putstr_fd(buffer, write_fd);
+        free(buffer);
+    }
+    close(write_fd);
+    read_fd = open("here_doc", O_RDONLY);
+    if (read_fd == -1)
+        error_exit("read-end here_doc open failed");
+    unlink("here_doc");
+    return (read_fd);
+}
+
 static void set_normal_iostream(int fileio_fds[2], char *filein, char *fileout)
 {
     fileio_fds[0] = open(filein, O_RDONLY, 0400);
@@ -59,7 +64,22 @@ static void set_normal_iostream(int fileio_fds[2], char *filein, char *fileout)
         error_exit("stdin not changed to infile");
     close(fileio_fds[0]);
     fileio_fds[0] = -1; // set to -1 to indicate it's no longer used
-    fileio_fds[1] = open(fileout, O_CREAT | O_WRONLY | O_TRUNC, 0755); // can probably be set later too
+
+    fileio_fds[1] = open(fileout, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fileio_fds[1] == -1)
+        error_exit("open() failed on outfile");
+}
+
+static void set_here_doc_iostream(int fileio_fds[2], char* delimiter, char *fileout)
+{
+    delimiter = ft_strjoin(delimiter, "\n");
+    fileio_fds[0] = here_doc(delimiter);
+    free(delimiter);
+    if (dup2(fileio_fds[0], STDIN_FILENO) == -1)
+        error_exit("stdin not changed to heredoc");
+    close(fileio_fds[0]);
+    fileio_fds[0] = -1; // set to -1 to indicate it's no longer used
+    fileio_fds[1] = open(fileout, O_CREAT | O_WRONLY | O_TRUNC, 0644);
     if (fileio_fds[1] == -1)
         error_exit("open() failed on outfile");
 }
@@ -67,12 +87,15 @@ static void set_normal_iostream(int fileio_fds[2], char *filein, char *fileout)
 int main(int ac, char **av, char **envp)
 {
     int i;
-    int fileio_fds[2]; // fd_filein and fd_fileout
+    int fileio_fds[2];
 
     if (ac <= 4)
         usage();
-    if (strncmp(av[1], "here_doc", strlen("here_doc")) == 0)
+    if (strcmp(av[1], "here_doc") == 0)
     {
+        if (ac <= 5)
+            usage();
+        set_here_doc_iostream(fileio_fds, av[2], av[ac - 1]);
         i = 3;
     }
     else
@@ -81,9 +104,7 @@ int main(int ac, char **av, char **envp)
         i = 2;
     }
     while (i < ac - 2)
-    {
         pipe_n_exec(av[i++], envp);
-    }
     dup2(fileio_fds[1], STDOUT_FILENO);
     close(fileio_fds[1]);
     execute(av[i], envp);
