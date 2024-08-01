@@ -7,37 +7,48 @@ void    usage(void)
     exit(EXIT_FAILURE);
 }
 
-// void    pipe_n_exec(char *cmd, char **envp)
-// {
-//     int fds[2];
-//     pid_t   pid;
+void execute(char *cmd, char **envp)
+{
+    char    **cmd_no_opts;
+    char    *pathname;
 
-//     if (pipe(fds))
-//     {
-//         perror("Pipe error!\n");
-//         exit(EXIT_FAILURE);
-//     }
-//     pid = fork();
-//     if (pid == -1)
-//     {
-//         perror("Fork error!\n");
-//         exit(EXIT_FAILURE);
-//     }
-//     if (pid == 0)
-//     {
-//         close(fds[R_END]);
-//         dup2(fds[W_END], STDOUT_FILENO);
-//         close(fds[W_END]);
-//         execute();
-//     }
-//     else
-//     {
-//         waitpid(-1, NULL, 0);
-//         close(fds[W_END]);
-//     }
-    
-//     // execve(cmd, cmd);
-// }
+    cmd_no_opts = ft_split(cmd, ' ');
+    if (!cmd_no_opts)
+        error_exit("split");
+    pathname = find_pathname(cmd, envp, cmd_no_opts[0]);
+    if (pathname)
+    {
+        execve(pathname, cmd_no_opts, envp);
+    }
+    dprintf(STDERR_FILENO, "command not found\n");
+    // free_list();
+}
+
+void    pipe_n_exec(char *cmd, char **envp)
+{
+    int pipefds[2];
+    pid_t   pid;
+
+    if (pipe(pipefds))
+        error_exit("pipe failed");
+    pid = fork();
+    if (pid == -1)
+        error_exit("fork failed");
+    if (pid == 0)
+    {
+        close(pipefds[R_END]);
+        dup2(pipefds[W_END], STDOUT_FILENO);
+        close(pipefds[W_END]);
+        execute(cmd, envp);
+    }
+    else
+    {
+        waitpid(-1, NULL, 0);
+        close(pipefds[W_END]);
+        dup2(pipefds[R_END], STDIN_FILENO);
+        close(pipefds[R_END]);
+    }
+}
 
 static void set_normal_iostream(int fileio_fds[2], char *filein, char *fileout)
 {
@@ -60,15 +71,21 @@ int main(int ac, char **av, char **envp)
 
     if (ac <= 4)
         usage();
-    // if (strncmp(av[1], "here_doc", strlen("here_doc")) == 0)
-    // {
-
-    // }
-    // else
+    if (strncmp(av[1], "here_doc", strlen("here_doc")) == 0)
+    {
+        i = 3;
+    }
+    else
+    {
         set_normal_iostream(fileio_fds, av[1], av[ac - 1]);
-    // while (ac - 4)
-    // {
-    //     pipe_n_exec(av[i++], envp);
-    //     ac--;
-    // }
+        i = 2;
+    }
+    while (i < ac - 2)
+    {
+        pipe_n_exec(av[i++], envp);
+    }
+    dup2(fileio_fds[1], STDOUT_FILENO);
+    close(fileio_fds[1]);
+    execute(av[i], envp);
+    return (0);
 }
