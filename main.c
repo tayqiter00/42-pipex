@@ -32,7 +32,7 @@ int here_doc(char* delimiter)
     int     write_fd;
     int     read_fd;
 
-    write_fd = open("here_doc", O_CREAT | O_WRONLY);
+    write_fd = open("here_doc", O_CREAT | O_WRONLY, 0644);
     if (write_fd == -1)
         error_exit("write-end here_doc open failed");
     while (1)
@@ -48,7 +48,7 @@ int here_doc(char* delimiter)
         free(buffer);
     }
     close(write_fd);
-    read_fd = open("here_doc", O_RDONLY);
+    read_fd = open("here_doc", O_RDONLY, 0400);
     if (read_fd == -1)
         error_exit("read-end here_doc open failed");
     unlink("here_doc");
@@ -79,7 +79,7 @@ static void set_here_doc_iostream(int fileio_fds[2], char* delimiter, char *file
         error_exit("stdin not changed to heredoc");
     close(fileio_fds[0]);
     fileio_fds[0] = -1; // set to -1 to indicate it's no longer used
-    fileio_fds[1] = open(fileout, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    fileio_fds[1] = open(fileout, O_CREAT | O_WRONLY | O_APPEND, 0644);
     if (fileio_fds[1] == -1)
         error_exit("open() failed on outfile");
 }

@@ -1,6 +1,7 @@
 #ifndef PIPEX_H
 # define PIPEX_H
 
+# include "libft/libft.h"
 # include <unistd.h>
 # include <fcntl.h>
 # include <unistd.h>
@@ -18,7 +19,7 @@ void    usage(void);
 void    error_exit(char *msg);
 char	**ft_split(char const *s, char c);
 char	*ft_strjoin(char const *s1, char const *s2);
-void    free_list(char **list);
+void    free_split(char **list);
 void    pipe_n_exec(char *cmd, char **envp);
 void    execute(char *cmd, char **envp);
 #endif

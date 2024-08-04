@@ -11,7 +11,7 @@ static char    *ft_getenv(const char *path, char **envp)
     return (NULL);
 }
 
-static char    *find_pathname(char *cmd, char **envp, char *cmd_arg)
+static char    *find_pathname(char **envp, char *cmd_arg)
 {
     char    *path;
     char    **dir_lst;
@@ -29,13 +29,13 @@ static char    *find_pathname(char *cmd, char **envp, char *cmd_arg)
         free(temp);
         if (access(abs_dir, X_OK | F_OK) == 0)
         {
-            free_list(dir_lst);
+            free_split(dir_lst);
             return (abs_dir);
         }
         free(abs_dir);
         i++;
     }
-    free_list(dir_lst);
+    free_split(dir_lst);
     return (NULL);
 }
 
@@ -47,12 +47,12 @@ void execute(char *cmd, char **envp)
     cmd_args = ft_split(cmd, ' '); // e.g., "ls -l" split to "ls" "-l")
     if (!cmd_args)
         error_exit("ft_split");
-    pathname = find_pathname(cmd, envp, cmd_args[0]); // access() is used here so execve unlikely to fail
+    pathname = find_pathname(envp, cmd_args[0]); // access() is used here so execve unlikely to fail
     if (pathname)
         execve(pathname, cmd_args, envp);
     else
     {
-        free_list(cmd_args);
+        free_split(cmd_args);
         error_exit("command not found");
     }
 }

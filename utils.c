@@ -15,7 +15,7 @@ void    error_exit(char *msg)
 }
 
 
-void    free_list(char **list)
+void    free_split(char **list)
 {
     int i;
 
